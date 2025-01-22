@@ -20,12 +20,10 @@ export async function GET(request: Request) {
 
     // Only force consent for new users
     const url = getGoogleOAuthURL(!hasExistingTokens);
-
     console.log('Generated auth URL:', url);
 
-    // For the redirect URL, ensure it's an absolute URL
-    const redirectUrl = new URL('/', request.url).toString();
-    return NextResponse.redirect(redirectUrl);
+    // Redirect to Google OAuth URL
+    return NextResponse.redirect(url);
   } catch (error) {
     console.error('Error in login route:', error);
     return NextResponse.redirect('/?error=auth');
