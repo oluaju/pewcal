@@ -1,24 +1,27 @@
-import { Inter } from "next/font/google";
-import "./globals.css";
-import Warnings from "./components/warnings";
-import { assistantId } from "./assistant-config";
-const inter = Inter({ subsets: ["latin"] });
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
+import Providers from './providers'
 
-export const metadata = {
-  title: "Assistants API Quickstart",
-  description: "A quickstart template using the Assistants API with OpenAI",
-  icons: {
-    icon: "/openai.svg",
-  },
-};
+const inter = Inter({ subsets: ['latin'] })
 
-export default function RootLayout({ children }) {
+export const metadata: Metadata = {
+  title: 'Calendar Assistant',
+  description: 'A smart calendar assistant powered by AI',
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="en">
       <body className={inter.className}>
-        {assistantId ? children : <Warnings />}
-        <img className="logo" src="/openai.svg" alt="OpenAI Logo" />
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
-  );
+  )
 }

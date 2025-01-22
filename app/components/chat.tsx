@@ -52,55 +52,61 @@ const Message = ({ role, text }: MessageProps) => {
 };
 
 type ChatProps = {
-  functionCallHandler?: (
-    toolCall: RequiredActionFunctionToolCall
-  ) => Promise<string>;
+  functionCallHandler?: (args: any) => Promise<string>;
 };
 
 const Chat = ({
   functionCallHandler = () => Promise.resolve(""), // default to return empty string
 }: ChatProps) => {
+  const [messages, setMessages] = useState<MessageProps[]>([]);
   const [userInput, setUserInput] = useState("");
-  const [messages, setMessages] = useState([]);
   const [inputDisabled, setInputDisabled] = useState(false);
   const [threadId, setThreadId] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // automatically scroll to bottom of chat
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // create a new threadID when chat component created
+  // Create thread on mount
   useEffect(() => {
     const createThread = async () => {
-      const res = await fetch(`/api/assistants/threads`, {
-        method: "POST",
-      });
-      const data = await res.json();
-      setThreadId(data.threadId);
+      try {
+        const res = await fetch("/api/thread/create", {
+          method: "POST",
+        });
+        
+        if (!res.ok) {
+          console.error('Server responded with:', res.status, res.statusText);
+          const text = await res.text();
+          console.error('Response body:', text);
+          throw new Error(`Server responded with ${res.status}: ${res.statusText}`);
+        }
+
+        const data = await res.json();
+        if (!data.threadId) {
+          throw new Error('No threadId received from server');
+        }
+        setThreadId(data.threadId);
+      } catch (error) {
+        console.error('Error creating thread:', error);
+        alert('Failed to create chat thread. Please check console for details.');
+      }
     };
     createThread();
   }, []);
 
-  const sendMessage = async (text) => {
-    const response = await fetch(
-      `/api/assistants/threads/${threadId}/messages`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          content: text,
-        }),
-      }
-    );
-    const stream = AssistantStream.fromReadableStream(response.body);
-    handleReadableStream(stream);
-  };
+  // Auto-grow textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [userInput]);
 
-  const submitActionResult = async (runId, toolCallOutputs) => {
+  const submitActionResult = async (runId: string, toolCallOutputs: any[]) => {
     const response = await fetch(
       `/api/assistants/threads/${threadId}/actions`,
       {
@@ -118,103 +124,98 @@ const Chat = ({
     handleReadableStream(stream);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userInput.trim()) return;
-    sendMessage(userInput);
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      { role: "user", text: userInput },
-    ]);
+    if (!userInput.trim() || inputDisabled) return;
+
+    const userMessage = userInput.trim();
     setUserInput("");
     setInputDisabled(true);
-    scrollToBottom();
-  };
 
-  /* Stream Event Handlers */
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
 
-  // textCreated - create new assistant message
-  const handleTextCreated = () => {
-    appendMessage("assistant", "");
-  };
+    // Add user message
+    setMessages((prev) => [...prev, { role: "user", text: userMessage }]);
 
-  // textDelta - append text to last assistant message
-  const handleTextDelta = (delta) => {
-    if (delta.value != null) {
-      appendToLastMessage(delta.value);
-    };
-    if (delta.annotations != null) {
-      annotateLastMessage(delta.annotations);
+    try {
+      const response = await fetch(`/api/assistants/threads/${threadId}/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: userMessage,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const stream = AssistantStream.fromReadableStream(response.body);
+      handleReadableStream(stream);
+    } catch (error) {
+      console.error("Error in chat:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: "I apologize, but I encountered an error. Please try again.",
+        },
+      ]);
+    } finally {
+      setInputDisabled(false);
     }
   };
 
-  // imageFileDone - show image in chat
-  const handleImageFileDone = (image) => {
-    appendToLastMessage(`\n![${image.file_id}](/api/files/${image.file_id})\n`);
-  }
-
-  // toolCallCreated - log new tool call
-  const toolCallCreated = (toolCall) => {
-    if (toolCall.type != "code_interpreter") return;
-    appendMessage("code", "");
-  };
-
-  // toolCallDelta - log delta and snapshot for the tool call
-  const toolCallDelta = (delta, snapshot) => {
-    if (delta.type != "code_interpreter") return;
-    if (!delta.code_interpreter.input) return;
-    appendToLastMessage(delta.code_interpreter.input);
-  };
-
-  // handleRequiresAction - handle function call
-  const handleRequiresAction = async (
-    event: AssistantStreamEvent.ThreadRunRequiresAction
-  ) => {
-    const runId = event.data.id;
-    const toolCalls = event.data.required_action.submit_tool_outputs.tool_calls;
-    // loop over tool calls and call function handler
-    const toolCallOutputs = await Promise.all(
-      toolCalls.map(async (toolCall) => {
-        const result = await functionCallHandler(toolCall);
-        return { output: result, tool_call_id: toolCall.id };
-      })
-    );
-    setInputDisabled(true);
-    submitActionResult(runId, toolCallOutputs);
-  };
-
-  // handleRunCompleted - re-enable the input form
-  const handleRunCompleted = () => {
-    setInputDisabled(false);
-  };
-
+  /* Stream Event Handlers */
   const handleReadableStream = (stream: AssistantStream) => {
-    // messages
-    stream.on("textCreated", handleTextCreated);
-    stream.on("textDelta", handleTextDelta);
+    let currentMessage = "";
 
-    // image
-    stream.on("imageFileDone", handleImageFileDone);
+    stream.on("textCreated", () => {
+      appendMessage("assistant", "");
+    });
 
-    // code interpreter
-    stream.on("toolCallCreated", toolCallCreated);
-    stream.on("toolCallDelta", toolCallDelta);
+    stream.on("textDelta", (delta: any) => {
+      if (delta.value != null) {
+        appendToLastMessage(delta.value);
+      }
+      if (delta.annotations != null) {
+        annotateLastMessage(delta.annotations);
+      }
+    });
 
-    // events without helpers yet (e.g. requires_action and run.done)
-    stream.on("event", (event) => {
-      if (event.event === "thread.run.requires_action")
-        handleRequiresAction(event);
-      if (event.event === "thread.run.completed") handleRunCompleted();
+    stream.on("error", (error: Error) => {
+      console.error("Stream error:", error);
+      appendMessage("assistant", "I apologize, but I encountered an error. Please try again.");
+    });
+
+    stream.on("event", (event: any) => {
+      if (event.event === "thread.run.requires_action") {
+        const toolCalls = event.data.required_action.submit_tool_outputs.tool_calls;
+        toolCalls.forEach(async (toolCall: RequiredActionFunctionToolCall) => {
+          try {
+            const result = await functionCallHandler(JSON.parse(toolCall.function.arguments));
+            await submitActionResult(event.data.id, [
+              {
+                tool_call_id: toolCall.id,
+                output: result,
+              },
+            ]);
+          } catch (error) {
+            console.error("Error handling tool call:", error);
+          }
+        });
+      }
+      if (event.event === "thread.run.completed") {
+        setInputDisabled(false);
+      }
     });
   };
 
-  /*
-    =======================
-    === Utility Helpers ===
-    =======================
-  */
-
-  const appendToLastMessage = (text) => {
+  const appendToLastMessage = (text: string) => {
     setMessages((prevMessages) => {
       const lastMessage = prevMessages[prevMessages.length - 1];
       const updatedLastMessage = {
@@ -225,11 +226,11 @@ const Chat = ({
     });
   };
 
-  const appendMessage = (role, text) => {
+  const appendMessage = (role: MessageProps["role"], text: string) => {
     setMessages((prevMessages) => [...prevMessages, { role, text }]);
   };
 
-  const annotateLastMessage = (annotations) => {
+  const annotateLastMessage = (annotations: any[]) => {
     setMessages((prevMessages) => {
       const lastMessage = prevMessages[prevMessages.length - 1];
       const updatedLastMessage = {
@@ -245,7 +246,6 @@ const Chat = ({
       })
       return [...prevMessages.slice(0, -1), updatedLastMessage];
     });
-    
   }
 
   return (
@@ -256,22 +256,23 @@ const Chat = ({
         ))}
         <div ref={messagesEndRef} />
       </div>
-      <form
-        onSubmit={handleSubmit}
-        className={`${styles.inputForm} ${styles.clearfix}`}
-      >
-        <input
-          type="text"
+      <form onSubmit={handleSubmit} className={styles.inputForm}>
+        <textarea
+          ref={textareaRef}
           className={styles.input}
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
-          placeholder="Enter your question"
-        />
-        <button
-          type="submit"
-          className={styles.button}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit(e);
+            }
+          }}
+          placeholder="Type a message..."
+          rows={1}
           disabled={inputDisabled}
-        >
+        />
+        <button type="submit" className={styles.button} disabled={inputDisabled}>
           Send
         </button>
       </form>

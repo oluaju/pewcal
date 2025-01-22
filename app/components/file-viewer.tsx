@@ -30,11 +30,30 @@ const FileViewer = () => {
   }, []);
 
   const fetchFiles = async () => {
-    const resp = await fetch("/api/assistants/files", {
-      method: "GET",
-    });
-    const data = await resp.json();
-    setFiles(data);
+    try {
+      const resp = await fetch("/api/files", {
+        method: "GET",
+      });
+      
+      if (!resp.ok) {
+        console.error('Server responded with:', resp.status, resp.statusText);
+        const text = await resp.text();
+        console.error('Response body:', text);
+        throw new Error(`Server responded with ${resp.status}: ${resp.statusText}`);
+      }
+
+      const data = await resp.json();
+      if (!Array.isArray(data)) {
+        console.error('Unexpected data format:', data);
+        throw new Error('Received invalid data format from server');
+      }
+
+      setFiles(data);
+    } catch (error) {
+      console.error('Error fetching files:', error);
+      // Optionally show error to user
+      alert('Failed to fetch files. Please check console for details.');
+    }
   };
 
   const handleFileDelete = async (fileId) => {

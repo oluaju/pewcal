@@ -1,0 +1,141 @@
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  text-align: center;
+  background: linear-gradient(45deg, #4F46E5, #7C3AED);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.description {
+  font-size: 1.1rem;
+  color: #6B7280;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.form {
+  width: 100%;
+  max-width: 600px;
+}
+
+.calendarList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.calendarOption {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border: 2px solid #E5E7EB;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.calendarOption:hover {
+  border-color: #4F46E5;
+  background-color: #F9FAFB;
+}
+
+.calendarOption.selected {
+  border-color: #4F46E5;
+  background-color: #EEF2FF;
+}
+
+.radio {
+  margin-right: 1rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  accent-color: #4F46E5;
+}
+
+.calendarInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.calendarName {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #1F2937;
+}
+
+.primaryBadge {
+  background-color: #4F46E5;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.submitButton {
+  width: 100%;
+  padding: 1rem;
+  background-color: #4F46E5;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.submitButton:hover:not(:disabled) {
+  background-color: #4338CA;
+}
+
+.submitButton:disabled {
+  background-color: #9CA3AF;
+  cursor: not-allowed;
+}
+
+.loadingSpinner {
+  color: #4F46E5;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.error {
+  color: #DC2626;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.retryButton {
+  padding: 0.5rem 1rem;
+  background-color: #DC2626;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.retryButton:hover {
+  background-color: #B91C1C;
+} 
