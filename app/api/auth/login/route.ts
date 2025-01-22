@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getGoogleOAuthURL } from '@/app/utils/google';
 import { cookies } from 'next/headers';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     console.log('Starting login process...');
@@ -20,7 +22,10 @@ export async function GET(request: Request) {
     const url = getGoogleOAuthURL(!hasExistingTokens);
 
     console.log('Generated auth URL:', url);
-    return NextResponse.redirect(url);
+
+    // For the redirect URL, ensure it's an absolute URL
+    const redirectUrl = new URL('/', request.url).toString();
+    return NextResponse.redirect(redirectUrl);
   } catch (error) {
     console.error('Error in login route:', error);
     return NextResponse.redirect('/?error=auth');

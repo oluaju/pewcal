@@ -174,7 +174,7 @@ export class CommandProcessor {
       console.log('Creating event:', event);
 
       // Create the event
-      const result = await this.calendarClient.createEvent(this.calendarId, event);
+      const result = await this.calendarClient.createEvent(event, this.calendarId);
 
       const dateStr = eventDetails.dateTime.start.toLocaleString('en-US', { 
         weekday: 'long',

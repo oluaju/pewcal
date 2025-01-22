@@ -12,7 +12,7 @@ export async function POST() {
       name: "Chat Assistant",
       instructions: "You are a helpful assistant that answers questions clearly and concisely.",
       model: "gpt-3.5-turbo",
-      tools: [{ type: "code_interpreter" }, { type: "retrieval" }]
+      tools: [{ type: "code_interpreter" }]
     });
 
     // Store the assistant ID in environment variable or database

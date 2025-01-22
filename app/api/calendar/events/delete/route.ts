@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
-import { GoogleCalendarService } from '@/app/utils/google-calendar';
+import { GoogleCalendarClient } from '@/app/utils/google-calendar';
 
 export async function POST(request: Request) {
   try {
-    const { eventId } = await request.json();
+    const { eventId, accessToken, refreshToken, calendarId } = await request.json();
     
-    if (!eventId) {
-      return NextResponse.json({ error: 'Event ID is required' }, { status: 400 });
+    if (!eventId || !accessToken || !refreshToken || !calendarId) {
+      return NextResponse.json({ 
+        error: 'Event ID, access token, refresh token, and calendar ID are required' 
+      }, { status: 400 });
     }
 
-    const calendarService = new GoogleCalendarService();
-    await calendarService.deleteEvent(eventId);
+    const calendarService = new GoogleCalendarClient(accessToken, refreshToken);
+    await calendarService.deleteEvent(calendarId, eventId);
 
     return NextResponse.json({ success: true });
   } catch (error) {

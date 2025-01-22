@@ -1,6 +1,23 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { GoogleCalendarClient } from '@/app/utils/google-calendar';
+import { openai } from '@/app/assistant-config';
+import { ensureAssistant } from '@/app/utils/ensure-assistant';
+import { createTimeRange, getFullDayRange, formatForGoogle } from '@/app/utils/date-utils';
+
+interface MessageContent {
+  type: 'text' | 'function';
+  text?: { value: string };
+  function?: {
+    name: string;
+    arguments: string;
+  };
+}
+
+interface AssistantMessage {
+  role: 'assistant';
+  content: MessageContent[];
+}
 
 export async function POST(
   request: Request,
@@ -33,146 +50,344 @@ export async function POST(
       }, { status: 400 });
     }
 
-    console.log('DEBUG - Step 2: Using calendar:', googleCalendarId);
+    // Properly decode the calendar ID
+    const decodedCalendarId = decodeURIComponent(decodeURIComponent(googleCalendarId));
+    console.log('DEBUG - Step 2: Using calendar:', {
+      encoded: googleCalendarId,
+      decoded: decodedCalendarId
+    });
 
     // Initialize calendar client
     const calendar = new GoogleCalendarClient(accessToken, refreshToken);
     console.log('DEBUG - Step 3: Calendar client initialized');
 
-    const lowerMessage = message.toLowerCase();
-    const decodedCalendarId = decodeURIComponent(googleCalendarId);
+    // Get or create assistant
+    const assistantId = await ensureAssistant();
+    console.log('DEBUG - Step 4: Using assistant:', assistantId);
 
-    // Handle delete command
-    if (lowerMessage.includes('delete') || lowerMessage.includes('remove')) {
-      // First get events for today to find matches
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+    // Create a thread
+    const thread = await openai.beta.threads.create();
+    console.log('DEBUG - Step 5: Created thread:', thread.id);
 
-      console.log('DEBUG - Step 4: Searching for events to delete');
-      const events = await calendar.getEvents(decodedCalendarId, today, tomorrow);
+    // Add the message to the thread
+    await openai.beta.threads.messages.create(thread.id, {
+      role: "user",
+      content: message
+    });
+    console.log('DEBUG - Step 6: Added message to thread');
 
-      // Extract the event title from the message
-      const titleMatch = message.match(/(?:delete|remove)\s+(.+?)(?:\s+(?:at|from|today|tomorrow|$))/i);
-      const title = titleMatch ? titleMatch[1].trim() : '';
-
-      if (!title) {
-        return NextResponse.json({
-          message: "I couldn't understand which event to delete. Please try 'delete [event name]'",
-          calendarUpdated: false
-        });
-      }
-
-      console.log('DEBUG - Step 5: Looking for events matching:', title);
-      const matchingEvents = events.filter(event => 
-        event.summary?.toLowerCase().includes(title.toLowerCase())
-      );
-
-      if (matchingEvents.length === 0) {
-        return NextResponse.json({
-          message: `I couldn't find any events matching "${title}"`,
-          calendarUpdated: false
-        });
-      }
-
-      // Delete all matching events
-      console.log('DEBUG - Step 6: Deleting events:', matchingEvents);
-      for (const event of matchingEvents) {
-        if (event.id) {
-          await calendar.deleteEvent(decodedCalendarId, event.id);
-        }
-      }
-
-      return NextResponse.json({
-        message: `Deleted ${matchingEvents.length} event(s) matching "${title}"`,
-        calendarUpdated: true
-      });
-    }
-
-    // Handle create/add command
-    if (lowerMessage.includes('add') || lowerMessage.includes('create')) {
-      // Extract title - everything between the command and "at" or "tomorrow"
-      const titleMatch = message.match(/(?:add|create)\s+(.+?)(?:\s+(?:at|tomorrow|today|next|this))/i);
-      const title = titleMatch ? titleMatch[1].trim() : '';
-
-      if (!title) {
-        console.log('DEBUG - Step 4: Could not extract title');
-        return NextResponse.json({
-          message: "I couldn't understand the event title. Please try again with a format like 'add meeting at 2pm' or 'create lunch tomorrow at noon'.",
-          calendarUpdated: false
-        });
-      }
-
-      console.log('DEBUG - Step 4: Extracted title:', title);
-
-      // Get the date
-      const today = new Date();
-      let eventDate = new Date(today);
-      
-      if (lowerMessage.includes('tomorrow')) {
-        eventDate.setDate(eventDate.getDate() + 1);
-      }
-
-      // Get the time
-      const timeMatch = lowerMessage.match(/(?:at|@)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
-      if (timeMatch) {
-        let hours = parseInt(timeMatch[1]);
-        const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
-        const isPM = timeMatch[3]?.toLowerCase() === 'pm' || (!timeMatch[3] && hours < 8);
-        
-        if (isPM && hours < 12) hours += 12;
-        if (!isPM && hours === 12) hours = 0;
-        
-        eventDate.setHours(hours, minutes, 0, 0);
-      } else {
-        eventDate.setHours(9, 0, 0, 0); // Default to 9 AM
-      }
-
-      // Set end time to 1 hour later
-      const endDate = new Date(eventDate);
-      endDate.setHours(endDate.getHours() + 1);
-
-      console.log('DEBUG - Step 5: Creating event:', {
-        title,
-        start: eventDate.toISOString(),
-        end: endDate.toISOString(),
-        calendarId: decodedCalendarId
-      });
-
-      // Create the event
-      const event = await calendar.createEvent({
-        summary: title,
-        start: {
-          dateTime: eventDate.toISOString(),
-          timeZone: 'America/Chicago'
+    // Run the assistant
+    const run = await openai.beta.threads.runs.create(thread.id, {
+      assistant_id: assistantId,
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "create_event",
+            parameters: {
+              type: "object",
+              properties: {
+                summary: {
+                  type: "string",
+                  description: "The title/summary of the event"
+                },
+                date: {
+                  type: "string",
+                  description: "The date for the event (e.g., 'today', 'tomorrow', 'next week')"
+                },
+                time: {
+                  type: "string",
+                  description: "The time for the event (e.g., '3pm', 'morning', '15:00')"
+                },
+                duration: {
+                  type: "number",
+                  description: "Duration in hours"
+                },
+                description: {
+                  type: "string",
+                  description: "Optional description of the event"
+                },
+                recurrence: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Optional recurrence rules"
+                }
+              },
+              required: ["summary", "date"]
+            }
+          }
         },
-        end: {
-          dateTime: endDate.toISOString(),
-          timeZone: 'America/Chicago'
+        {
+          type: "function",
+          function: {
+            name: "delete_events",
+            parameters: {
+              type: "object",
+              properties: {
+                query: {
+                  type: "string",
+                  description: "Search term to match event titles"
+                },
+                date: {
+                  type: "string",
+                  description: "The date to delete events from (e.g., 'today', 'tomorrow')"
+                }
+              },
+              required: ["date"]
+            }
+          }
         }
-      }, decodedCalendarId);
+      ]
+    });
+    console.log('DEBUG - Step 7: Started assistant run:', run.id);
 
-      console.log('DEBUG - Step 6: Created event:', event);
-
-      return NextResponse.json({
-        message: `Created event "${title}" for ${eventDate.toLocaleString()}`,
-        calendarUpdated: true,
-        result: event
-      });
+    // Wait for the run to complete or require action
+    let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+    while (runStatus.status === 'queued' || runStatus.status === 'in_progress') {
+      console.log('DEBUG - Step 8: Run status:', runStatus.status);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
     }
 
-    // Handle update command (coming soon)
-    if (lowerMessage.includes('update') || lowerMessage.includes('change')) {
+    // Handle required actions (function calls)
+    if (runStatus.status === 'requires_action') {
+      console.log('DEBUG - Step 9: Run requires action:', JSON.stringify(runStatus.required_action, null, 2));
+      
+      const toolCalls = runStatus.required_action?.submit_tool_outputs?.tool_calls;
+      if (!toolCalls || toolCalls.length === 0) {
+        throw new Error('No tool calls found in required action');
+      }
+
+      const toolCall = toolCalls[0]; // We only handle one function call at a time
+      console.log('DEBUG - Step 10: Raw tool call:', JSON.stringify(toolCall, null, 2));
+
+      // Access the function properties directly from the toolCall object
+      const name = toolCall.function.name;
+      const args = toolCall.function.arguments;
+      console.log('DEBUG - Step 11: Function details:', { name, arguments: args });
+
+      // Process the function call
+      try {
+        const parsedArgs = JSON.parse(args);
+        console.log('DEBUG - Step 12: Parsed arguments:', parsedArgs);
+
+        // Submit the tool outputs back to the assistant
+        await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
+          tool_outputs: [
+            {
+              tool_call_id: toolCall.id,
+              output: JSON.stringify({ success: true })
+            }
+          ]
+        });
+
+        switch (name) {
+          case 'delete_events': {
+            const { query, date } = parsedArgs;
+            const timeRange = getFullDayRange(date);
+
+            const events = await calendar.getEvents(
+              decodedCalendarId, 
+              timeRange.start,
+              timeRange.end
+            );
+
+            const matchingEvents = query ? 
+              events.filter(event => {
+                const eventSummary = event.summary?.toLowerCase() || '';
+                const searchWords = query.toLowerCase().split(/\s+/);
+                return searchWords.every(word => eventSummary.includes(word));
+              }) : 
+              events;
+
+            if (matchingEvents.length === 0) {
+              return NextResponse.json({
+                message: query ? 
+                  `I couldn't find any events matching "${query}"` :
+                  "I couldn't find any events in that time period",
+                calendarUpdated: false
+              });
+            }
+
+            for (const event of matchingEvents) {
+              if (event.id) {
+                await calendar.deleteEvent(decodedCalendarId, event.id);
+              }
+            }
+
+            return NextResponse.json({
+              message: `Deleted ${matchingEvents.length} event(s)${query ? ` matching "${query}"` : ''}`,
+              calendarUpdated: true
+            });
+          }
+
+          case 'create_event': {
+            const { summary, date, time, duration = 1, description, recurrence } = parsedArgs;
+            const timeRange = createTimeRange(date, time, duration);
+
+            const event = await calendar.createEvent({
+              summary,
+              description,
+              start: {
+                dateTime: formatForGoogle(timeRange.start),
+                timeZone: 'America/Chicago'
+              },
+              end: {
+                dateTime: formatForGoogle(timeRange.end),
+                timeZone: 'America/Chicago'
+              },
+              recurrence
+            }, decodedCalendarId);
+
+            return NextResponse.json({
+              message: `Created event "${summary}" from ${timeRange.start.toLocaleString()} to ${timeRange.end.toLocaleString()}`,
+              calendarUpdated: true,
+              result: event
+            });
+          }
+
+          default:
+            return NextResponse.json({
+              message: "I don't know how to handle that type of request yet.",
+              calendarUpdated: false
+            });
+        }
+      } catch (error) {
+        console.error('DEBUG - Error processing function call:', error);
+        return NextResponse.json({
+          message: "Something went wrong processing your request. Please try again.",
+          error: error.message,
+          calendarUpdated: false
+        }, { status: 500 });
+      }
+    }
+
+    if (runStatus.status !== 'completed') {
+      console.error('DEBUG - Step 9: Assistant run failed:', runStatus);
       return NextResponse.json({
-        message: "Update functionality coming soon. For now, you can delete the event and create a new one.",
+        message: "I had trouble processing your request. Please try again.",
+        error: `Assistant run failed: ${runStatus.status}`
+      }, { status: 500 });
+    }
+
+    // Get the assistant's response
+    const messages = await openai.beta.threads.messages.list(thread.id);
+    const assistantMessage = messages.data[0] as AssistantMessage;
+    console.log('DEBUG - Step 10: Full assistant response:', JSON.stringify(assistantMessage, null, 2));
+
+    if (!assistantMessage || !assistantMessage.content || assistantMessage.content.length === 0) {
+      console.error('DEBUG - Step 11: No message content');
+      return NextResponse.json({
+        message: "I didn't get a response. Please try again.",
+        error: "No response from assistant"
+      }, { status: 500 });
+    }
+
+    // Log all content types received
+    console.log('DEBUG - Step 12: Content types:', assistantMessage.content.map(c => c.type));
+    
+    // Handle the function call from the assistant
+    const functionContent = assistantMessage.content.find(c => c.type === 'function');
+    console.log('DEBUG - Step 13: Function content:', JSON.stringify(functionContent, null, 2));
+    
+    if (!functionContent?.function) {
+      console.error('DEBUG - Step 14: No function call found in response');
+      // Log the actual content we received
+      console.log('DEBUG - Step 14: Actual content received:', assistantMessage.content);
+      return NextResponse.json({
+        message: "I couldn't understand how to process that request. Please try again.",
         calendarUpdated: false
       });
     }
 
-    return NextResponse.json({
-      message: "I can help you manage calendar events. Try:\n- 'add [event] at [time]'\n- 'delete [event]'\n- 'create [event] tomorrow at [time]'",
-      calendarUpdated: false
-    });
+    const { name, arguments: args } = functionContent.function;
+    console.log('DEBUG - Step 15: Function name:', name);
+    console.log('DEBUG - Step 16: Function arguments:', args);
+    
+    try {
+      const parsedArgs = JSON.parse(args);
+      console.log('DEBUG - Step 17: Parsed arguments:', parsedArgs);
+
+      switch (name) {
+        case 'delete_events': {
+          const { query, date } = parsedArgs;
+          const timeRange = getFullDayRange(date);
+
+          const events = await calendar.getEvents(
+            decodedCalendarId, 
+            timeRange.start,
+            timeRange.end
+          );
+
+          const matchingEvents = query ? 
+            events.filter(event => {
+              const eventSummary = event.summary?.toLowerCase() || '';
+              const searchWords = query.toLowerCase().split(/\s+/);
+              return searchWords.every(word => eventSummary.includes(word));
+            }) : 
+            events;
+
+          if (matchingEvents.length === 0) {
+            return NextResponse.json({
+              message: query ? 
+                `I couldn't find any events matching "${query}"` :
+                "I couldn't find any events in that time period",
+              calendarUpdated: false
+            });
+          }
+
+          for (const event of matchingEvents) {
+            if (event.id) {
+              await calendar.deleteEvent(decodedCalendarId, event.id);
+            }
+          }
+
+          return NextResponse.json({
+            message: `Deleted ${matchingEvents.length} event(s)${query ? ` matching "${query}"` : ''}`,
+            calendarUpdated: true
+          });
+        }
+
+        case 'create_event': {
+          const { summary, date, time, duration = 1, description, recurrence } = parsedArgs;
+          const timeRange = createTimeRange(date, time, duration);
+
+          const event = await calendar.createEvent({
+            summary,
+            description,
+            start: {
+              dateTime: formatForGoogle(timeRange.start),
+              timeZone: 'America/Chicago'
+            },
+            end: {
+              dateTime: formatForGoogle(timeRange.end),
+              timeZone: 'America/Chicago'
+            },
+            recurrence
+          }, decodedCalendarId);
+
+          return NextResponse.json({
+            message: `Created event "${summary}" from ${timeRange.start.toLocaleString()} to ${timeRange.end.toLocaleString()}`,
+            calendarUpdated: true,
+            result: event
+          });
+        }
+
+        default:
+          return NextResponse.json({
+            message: "I don't know how to handle that type of request yet.",
+            calendarUpdated: false
+          });
+      }
+
+    } catch (error) {
+      console.error('DEBUG - Error in function parsing:', error);
+      return NextResponse.json({
+        message: "Something went wrong. Please try again.",
+        error: error.message,
+        calendarUpdated: false
+      }, { status: 500 });
+    }
 
   } catch (error) {
     console.error('DEBUG - Error in chat endpoint:', error);

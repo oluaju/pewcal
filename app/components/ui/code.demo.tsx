@@ -1,11 +1,12 @@
 "use client";
 import React, { useState } from "react";
-import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { LayoutDashboard, UserCog, Settings, LogOut } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
+
+// Simple utility function to join classNames
+const cn = (...classes: string[]) => classes.filter(Boolean).join(' ');
 
 export function SidebarDemo() {
   const links = [
@@ -46,35 +47,38 @@ export function SidebarDemo() {
         "h-[60vh]" // for your use case, use `h-screen` instead of `h-[60vh]`
       )}
     >
-      <Sidebar open={open} setOpen={setOpen}>
-        <SidebarBody className="justify-between gap-10">
-          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-            {open ? <Logo /> : <LogoIcon />}
-            <div className="mt-8 flex flex-col gap-2">
-              {links.map((link, idx) => (
-                <SidebarLink key={idx} link={link} />
-              ))}
-            </div>
+      <nav className={cn("flex flex-col gap-4 p-4", open ? "w-64" : "w-20")}>
+        <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+          {open ? <Logo /> : <LogoIcon />}
+          <div className="mt-8 flex flex-col gap-2">
+            {links.map((link, idx) => (
+              <Link 
+                key={idx} 
+                href={link.href}
+                className="flex items-center gap-2 p-2 rounded hover:bg-gray-200 dark:hover:bg-neutral-700"
+              >
+                {link.icon}
+                {open && <span>{link.label}</span>}
+              </Link>
+            ))}
           </div>
-          <div>
-            <SidebarLink
-              link={{
-                label: "Manu Arora",
-                href: "#",
-                icon: (
-                  <Image
-                    src="https://assets.aceternity.com/manu.png"
-                    className="h-7 w-7 flex-shrink-0 rounded-full"
-                    width={50}
-                    height={50}
-                    alt="Avatar"
-                  />
-                ),
-              }}
+        </div>
+        <div>
+          <Link 
+            href="#"
+            className="flex items-center gap-2 p-2 rounded hover:bg-gray-200 dark:hover:bg-neutral-700"
+          >
+            <Image
+              src="https://assets.aceternity.com/manu.png"
+              className="h-7 w-7 flex-shrink-0 rounded-full"
+              width={50}
+              height={50}
+              alt="Avatar"
             />
-          </div>
-        </SidebarBody>
-      </Sidebar>
+            {open && <span>Manu Arora</span>}
+          </Link>
+        </div>
+      </nav>
       <Dashboard />
     </div>
   );

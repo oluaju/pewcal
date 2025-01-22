@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { openai } from '@/app/assistant-config';
-import { Readable } from 'stream';
+import { writeFileSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
+import { createReadStream } from 'fs';
 
 export async function POST(request: Request) {
   try {
@@ -17,14 +20,12 @@ export async function POST(request: Request) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Create a proper file object for OpenAI
-    const stream = Readable.from(buffer);
-    Object.defineProperty(stream, 'name', {
-      value: file.name
-    });
+    // Create a temporary file
+    const tempPath = join(tmpdir(), `upload-${Date.now()}-${file.name}`);
+    writeFileSync(tempPath, buffer);
 
     const uploadedFile = await openai.files.create({
-      file: stream,
+      file: createReadStream(tempPath),
       purpose: 'assistants',
     });
 
