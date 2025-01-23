@@ -2,7 +2,10 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: white;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  background-color: white;
 }
 
 .header {
@@ -23,6 +26,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 0 1rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .logo {
@@ -69,7 +74,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding-top: 4rem;
+  padding-top: 3rem;
 }
 
 .hero {
@@ -78,7 +83,9 @@
   justify-content: center;
   padding: 2rem 1rem;
   background: linear-gradient(to bottom, #ffffff, #f7f9fc);
-  min-height: 80vh;
+  min-height: 60vh;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .heroContent {
@@ -89,6 +96,8 @@
   align-items: center;
   gap: 1.5rem;
   padding: 0 1rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .title {
@@ -140,6 +149,12 @@
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .feature {
@@ -148,6 +163,11 @@
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   text-align: center;
+  border: 1px solid #eaeaea;
+  padding: 1.5rem;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .feature h3 {
@@ -182,6 +202,12 @@
   max-width: 1000px;
   margin: 0 auto;
   padding: 0 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .pricingCard {
@@ -192,6 +218,9 @@
   text-align: left;
   position: relative;
   transition: transform 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
 }
 
 .pricingCard:hover {
@@ -293,26 +322,42 @@
 @media (max-width: 768px) {
   .header {
     padding: 0.75rem;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .nav {
     padding: 0 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .hero {
-    min-height: calc(100vh - 4rem);
-    padding: 1rem;
+    min-height: auto;
+    padding: 2rem 1rem;
   }
 
   .heroContent {
-    padding: 0;
+    padding: 1rem 0;
     gap: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .title {
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    margin-bottom: 1rem;
   }
 
   .googleButton {
     width: 100%;
+    max-width: 300px;
     justify-content: center;
-    padding: 0.875rem 1.5rem;
+    padding: 0.875rem 1rem;
+    margin: 0 auto;
   }
 
   .features {
@@ -334,37 +379,59 @@
   }
 
   .pricingCard {
-    padding: 1.5rem;
+    padding: 1.25rem;
+    margin: 0;
+  }
+
+  .pricingHeader h3 {
+    font-size: clamp(1.125rem, 4vw, 1.5rem);
+    word-wrap: break-word;
+  }
+
+  .price {
+    font-size: clamp(1.5rem, 5vw, 2.5rem);
+  }
+
+  .pricingCard ul li {
+    font-size: 0.875rem;
+    padding-right: 0.5rem;
+    word-wrap: break-word;
   }
 
   .badge {
     right: 10px;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.75rem;
   }
-}
 
-.container {
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: white;
+  .button {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
 }
 
 .content {
   text-align: center;
-  padding: 2rem;
+  padding: 1rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .content h1 {
-  font-size: 2.5rem;
+  font-size: clamp(1.5rem, 5vw, 2.5rem);
   color: #1a1a1a;
   margin-bottom: 1rem;
+  padding: 0 1rem;
+  word-wrap: break-word;
 }
 
 .content p {
-  font-size: 1.25rem;
+  font-size: clamp(1rem, 3vw, 1.25rem);
   color: #666;
   margin-bottom: 2rem;
+  padding: 0 1rem;
+  word-wrap: break-word;
 }
 
 .connectButton {
