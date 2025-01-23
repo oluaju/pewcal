@@ -33,6 +33,27 @@
   z-index: 2;
 }
 
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  z-index: 2;
+}
+
+.headerCta {
+  padding: 0.5rem 1rem;
+  background: #006BFF;
+  color: white;
+  border-radius: 6px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+
+.headerCta:hover {
+  background: #0056b3;
+}
+
 .navLinks {
   display: flex;
   gap: 2rem;
@@ -45,7 +66,7 @@
   border: none;
   cursor: pointer;
   padding: 0.5rem;
-  z-index: 2;
+  color: #1a1a1a;
 }
 
 @media (max-width: 768px) {

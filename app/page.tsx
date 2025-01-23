@@ -26,15 +26,17 @@ export default function Home() {
           <Link href="/" className={styles.logo}>
             PewCal
           </Link>
-          <button className={styles.menuButton} onClick={toggleMenu}>
-            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          <div className={styles.navRight}>
+            <a href="/api/auth/login" className={styles.headerCta}>
+              {hasExistingTokens ? 'Sign in' : 'Get Started'}
+            </a>
+            <button className={styles.menuButton} onClick={toggleMenu}>
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
           <div className={`${styles.navLinks} ${isMenuOpen ? styles.open : ''}`}>
             <Link href="#features" onClick={() => setIsMenuOpen(false)}>Features</Link>
             <Link href="#pricing" onClick={() => setIsMenuOpen(false)}>Pricing</Link>
-            <a href="/api/auth/login" className={styles.loginButton} onClick={() => setIsMenuOpen(false)}>
-              {hasExistingTokens ? 'Sign in' : 'Get Started'}
-            </a>
           </div>
         </nav>
       </header>
@@ -49,7 +51,7 @@ export default function Home() {
               Join churches who easily manage their events with the #1 AI-powered church calendar tool.
             </p>
             <a href="/api/auth/login" className={styles.googleButton}>
-              <FaGoogle /> {hasExistingTokens ? 'Sign in with Google' : 'Sign up with Google Calendar'}
+              <FaGoogle /> {hasExistingTokens ? 'Sign in with Google' : 'Sign up with Google'}
             </a>
           </div>
         </div>
