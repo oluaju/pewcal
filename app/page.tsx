@@ -4,15 +4,20 @@ import { useEffect, useState } from 'react';
 import styles from './page.module.css';
 import { FaGoogle } from 'react-icons/fa';
 import Link from 'next/link';
-import { Calendar, MessageSquare, Clock } from 'lucide-react';
+import { Calendar, MessageSquare, Clock, Menu, X } from 'lucide-react';
 
 export default function Home() {
   const [hasExistingTokens, setHasExistingTokens] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     // Check if user has existing tokens by looking for refresh_token cookie
     setHasExistingTokens(document.cookie.includes('refresh_token='));
   }, []);
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
 
   return (
     <div className={styles.container}>
@@ -21,10 +26,13 @@ export default function Home() {
           <Link href="/" className={styles.logo}>
             PewCal
           </Link>
-          <div className={styles.navLinks}>
-            <Link href="#features">Features</Link>
-            <Link href="#pricing">Pricing</Link>
-            <a href="/api/auth/login" className={styles.loginButton}>
+          <button className={styles.menuButton} onClick={toggleMenu}>
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+          <div className={`${styles.navLinks} ${isMenuOpen ? styles.open : ''}`}>
+            <Link href="#features" onClick={() => setIsMenuOpen(false)}>Features</Link>
+            <Link href="#pricing" onClick={() => setIsMenuOpen(false)}>Pricing</Link>
+            <a href="/api/auth/login" className={styles.loginButton} onClick={() => setIsMenuOpen(false)}>
               {hasExistingTokens ? 'Sign in' : 'Get Started'}
             </a>
           </div>
@@ -77,7 +85,7 @@ export default function Home() {
                 <li>Google Calendar integration</li>
                 <li>Up to 50 events/month</li>
               </ul>
-              <a href="/api/auth/login" className={styles.button}>Get Started</a>
+              <a href="/api/auth/login" className={styles.googleButton}>Get Started</a>
             </div>
             <div className={`${styles.pricingCard} ${styles.featured}`}>
               <div className={styles.badge}>Popular</div>
@@ -91,7 +99,7 @@ export default function Home() {
                 <li>Unlimited events</li>
                 <li>Priority support</li>
               </ul>
-              <a href="/api/auth/login" className={`${styles.button} ${styles.featured}`}>Get Started</a>
+              <a href="/api/auth/login" className={`${styles.googleButton}`}>Get Started</a>
             </div>
           </div>
         </section>
