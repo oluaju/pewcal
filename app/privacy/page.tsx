@@ -6,7 +6,7 @@ export default function PrivacyPolicy() {
       <div className="space-y-6">
         <section>
           <h2 className="text-2xl font-semibold mb-4">1. Information We Collect</h2>
-          <p className="mb-4">When you use PewCal, we collect the following types of information:</p>
+          <p className="mb-4">When you use PewPal, we collect the following types of information:</p>
           <ul className="list-disc pl-6 space-y-2">
             <li>Your Google account information (name, email, profile picture)</li>
             <li>Calendar data (events, schedules, and related information)</li>
@@ -65,7 +65,7 @@ export default function PrivacyPolicy() {
           <p className="mb-4">
             If you have any questions about this Privacy Policy, please contact us at:
             <br />
-            Email: privacy@pewcal.com
+            Email: privacy@pewpal.com
           </p>
         </section>
 

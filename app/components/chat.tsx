@@ -7,6 +7,7 @@ import Markdown from "react-markdown";
 // @ts-expect-error - no types for this yet
 import { AssistantStreamEvent } from "openai/resources/beta/assistants/assistants";
 import { RequiredActionFunctionToolCall } from "openai/resources/beta/threads/runs/runs";
+import { X, Paperclip } from "lucide-react";
 
 type MessageProps = {
   role: "user" | "assistant" | "code";
@@ -53,58 +54,57 @@ const Message = ({ role, text }: MessageProps) => {
 
 type ChatProps = {
   functionCallHandler?: (args: any) => Promise<string>;
+  onClose?: () => void;
 };
 
 const Chat = ({
-  functionCallHandler = () => Promise.resolve(""), // default to return empty string
+  functionCallHandler = () => Promise.resolve(""),
+  onClose
 }: ChatProps) => {
   const [messages, setMessages] = useState<MessageProps[]>([]);
-  const [userInput, setUserInput] = useState("");
-  const [inputDisabled, setInputDisabled] = useState(false);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [threadId, setThreadId] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
   }, [messages]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'inherit';
+      const scrollHeight = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${Math.min(scrollHeight, 120)}px`;
+    }
+  }, [input]);
 
   // Create thread on mount
   useEffect(() => {
     const createThread = async () => {
       try {
-        const res = await fetch("/api/thread/create", {
-          method: "POST",
+        const response = await fetch('/api/chat/thread', {
+          method: 'POST'
         });
-        
-        if (!res.ok) {
-          console.error('Server responded with:', res.status, res.statusText);
-          const text = await res.text();
-          console.error('Response body:', text);
-          throw new Error(`Server responded with ${res.status}: ${res.statusText}`);
-        }
-
-        const data = await res.json();
+        const data = await response.json();
         if (!data.threadId) {
           throw new Error('No threadId received from server');
         }
         setThreadId(data.threadId);
       } catch (error) {
         console.error('Error creating thread:', error);
-        alert('Failed to create chat thread. Please check console for details.');
       }
     };
     createThread();
   }, []);
-
-  // Auto-grow textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  }, [userInput]);
 
   const submitActionResult = async (runId: string, toolCallOutputs: any[]) => {
     const response = await fetch(
@@ -126,11 +126,11 @@ const Chat = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userInput.trim() || inputDisabled) return;
+    if (!input.trim() || isLoading) return;
 
-    const userMessage = userInput.trim();
-    setUserInput("");
-    setInputDisabled(true);
+    const userMessage = input.trim();
+    setInput("");
+    setIsLoading(true);
 
     // Reset textarea height
     if (textareaRef.current) {
@@ -166,7 +166,7 @@ const Chat = ({
         },
       ]);
     } finally {
-      setInputDisabled(false);
+      setIsLoading(false);
     }
   };
 
@@ -210,7 +210,7 @@ const Chat = ({
         });
       }
       if (event.event === "thread.run.completed") {
-        setInputDisabled(false);
+        setIsLoading(false);
       }
     });
   };
@@ -248,8 +248,63 @@ const Chat = ({
     });
   }
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check if file is a video
+    if (!file.type.startsWith('video/')) {
+      alert('Please upload a video file');
+      return;
+    }
+
+    // Check file size (limit to 100MB)
+    if (file.size > 100 * 1024 * 1024) {
+      alert('Video size should be less than 100MB');
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/files/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload video');
+      }
+
+      const data = await response.json();
+      
+      // Add a message with the video
+      setMessages(prev => [...prev, {
+        role: 'user',
+        text: `Uploaded video: ${file.name}`
+      }]);
+
+    } catch (error) {
+      console.error('Error uploading video:', error);
+      alert('Failed to upload video. Please try again.');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <div className={styles.chatContainer}>
+      <div className={styles.header}>
+        <div className={styles.title}>AI Assistant</div>
+        <button onClick={onClose} className={styles.closeButton}>
+          <X size={20} />
+        </button>
+      </div>
       <div className={styles.messages}>
         {messages.map((msg, index) => (
           <Message key={index} role={msg.role} text={msg.text} />
@@ -257,23 +312,37 @@ const Chat = ({
         <div ref={messagesEndRef} />
       </div>
       <form onSubmit={handleSubmit} className={styles.inputForm}>
+        <input
+          type="file"
+          accept="video/*"
+          onChange={handleFileUpload}
+          className={styles.fileInput}
+          ref={fileInputRef}
+          id="video-upload"
+        />
+        <label htmlFor="video-upload" className={styles.uploadButton}>
+          <Paperclip size={20} />
+        </label>
         <textarea
           ref={textareaRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Type your message..."
           className={styles.input}
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
+          rows={1}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               handleSubmit(e);
             }
           }}
-          placeholder="Type a message..."
-          rows={1}
-          disabled={inputDisabled}
         />
-        <button type="submit" className={styles.button} disabled={inputDisabled}>
-          Send
+        <button 
+          type="submit" 
+          className={styles.button} 
+          disabled={isLoading || isUploading || !input.trim()}
+        >
+          {isLoading || isUploading ? "..." : "Send"}
         </button>
       </form>
     </div>

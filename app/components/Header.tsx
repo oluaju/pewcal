@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './Header.module.css';
@@ -17,6 +17,20 @@ export default function Header() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const userSectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userSectionRef.current && !userSectionRef.current.contains(event.target as Node) && showDropdown) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDropdown]);
 
   useEffect(() => {
     fetchUserProfile();
@@ -62,10 +76,10 @@ export default function Header() {
   return (
     <header className={styles.header}>
       <Link href="/" className={styles.logo}>
-        PewCal
+        PewPal
       </Link>
       
-      <div className={styles.userSection}>
+      <div className={styles.userSection} ref={userSectionRef}>
         {loading ? (
           <div>Loading...</div>
         ) : userProfile ? (

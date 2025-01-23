@@ -103,7 +103,7 @@ export default function CalendarSetup() {
     <div className={styles.container}>
       <h1 className={styles.title}>Select Your Calendar</h1>
       <p className={styles.description}>
-        Choose the Google Calendar you want to use with PewCal.
+        Choose the Google Calendar you want to use with PewPal.
       </p>
 
       <form onSubmit={handleSubmit} className={styles.form}>

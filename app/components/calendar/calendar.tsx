@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Calendar as BigCalendar, dateFnsLocalizer, View, NavigateAction, Components, EventWrapperProps } from 'react-big-calendar';
 import { format as dateFnsFormat, parse, startOfWeek, getDay, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, setHours, setMinutes, isSameDay, startOfMonth } from 'date-fns';
 import enUS from 'date-fns/locale/en-US';
@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { UserCircle, Menu, Plus, Calendar as CalendarIcon, CalendarRange, Clock, List, ChevronDown } from 'lucide-react';
 import CalendarSelector from './CalendarSelector';
 import { useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 const locales = {
   'en-US': enUS,
@@ -30,6 +31,20 @@ interface CalendarEvent {
   end: Date;
   description?: string;
   color?: string;
+  calendarColor?: string;
+}
+
+interface Calendar {
+  id: string;
+  summary: string;
+  backgroundColor?: string;
+  foregroundColor?: string;
+  selected?: boolean;
+}
+
+interface CalendarSelectorProps {
+  calendars: Calendar[];
+  isLoading: boolean;
 }
 
 const views: View[] = ['month', 'week', 'day', 'agenda'];
@@ -46,141 +61,152 @@ interface ChatResponse {
   authUrl?: string;
 }
 
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  picture?: string;
+}
+
 const Calendar = ({ churchId }: CalendarProps) => {
   const router = useRouter();
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [view, setView] = useState<View>(isMobile ? 'day' : 'month');
   const [date, setDate] = useState(new Date());
   const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const queryClient = useQueryClient();
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
-  // Check auth status first
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
-  // Only fetch events if authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchEvents();
-      // Fetch events every 5 minutes instead of every minute to reduce API calls
-      const interval = setInterval(fetchEvents, 300000);
-      
-      // Listen for calendar changes
-      const handleCalendarChange = () => {
-        console.log('Calendar changed, fetching new events...');
-        fetchEvents();
-      };
-      
-      window.addEventListener('calendarChange', handleCalendarChange);
-      
-      return () => {
-        clearInterval(interval);
-        window.removeEventListener('calendarChange', handleCalendarChange);
-      };
-    }
-  }, [date, view, churchId, isAuthenticated]);
-
-  const checkAuthStatus = async () => {
-    try {
-      const response = await fetch('/api/auth/me');
-      if (response.ok) {
-        setIsAuthenticated(true);
-      } else {
-        setIsAuthenticated(false);
+  // Get the selected calendar from the query cache
+  const { data: selectedCalendar = '' } = useQuery({
+    queryKey: ['selectedCalendar'],
+    queryFn: async () => {
+      try {
+        const cookies = document.cookie.split(';');
+        const calendarCookie = cookies
+          .find(cookie => cookie.trim().startsWith('google_calendar_id='));
+        if (calendarCookie) {
+          const encodedValue = calendarCookie.split('=')[1];
+          return decodeURIComponent(encodedValue.trim());
+        }
+        return '';
+      } catch (error) {
+        console.error('Error parsing calendar cookie:', error);
+        return '';
       }
-    } catch (error) {
-      console.error('Error checking auth status:', error);
-      setIsAuthenticated(false);
-    }
-  };
+    },
+    staleTime: Infinity // Never consider this data stale
+  });
 
-  const fetchEvents = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await fetch(`/api/calendar/events`);
-      
+  // Use React Query for events with the selected calendar
+  const { data: events = [], isLoading: eventsLoading } = useQuery({
+    queryKey: ['events', date, view, selectedCalendar],
+    queryFn: async () => {
+      const response = await fetch(`/api/calendar/events?calendarId=${selectedCalendar}`);
       if (!response.ok) {
         if (response.status === 401) {
           setIsAuthenticated(false);
-          return;
+          throw new Error('Authentication required');
         }
         throw new Error('Failed to fetch events');
       }
-
       const data = await response.json();
-      // Handle both array and object response formats
       const eventsArray = Array.isArray(data) ? data : data.events || [];
       
-      const formattedEvents: CalendarEvent[] = eventsArray.map((event: any) => ({
+      return eventsArray.map((event: any) => ({
         title: event.summary || 'Untitled Event',
         start: new Date(event.start.dateTime || event.start.date),
         end: new Date(event.end.dateTime || event.end.date),
         description: event.description || '',
-        color: event.colorId ? `#${event.colorId}` : '#0A84FF'
-      }));
-      
-      // Sort events by start date
-      formattedEvents.sort((a, b) => a.start.getTime() - b.start.getTime());
-      setEvents(formattedEvents);
-    } catch (error) {
-      console.error('Error fetching events:', error);
-      setError('Failed to load events');
-    } finally {
-      setLoading(false);
-    }
-  };
+        color: event.colorId ? event.calendarColor : undefined,
+        calendarColor: event.calendarColor
+      })).sort((a: CalendarEvent, b: CalendarEvent) => a.start.getTime() - b.start.getTime());
+    },
+    enabled: isAuthenticated === true && !!selectedCalendar,
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    gcTime: 30 * 60 * 1000, // Keep data in cache for 30 minutes
+    refetchInterval: 300000, // Refetch every 5 minutes
+    refetchOnWindowFocus: false
+  });
 
-  const handleNavigate = (newDate: Date, viewType: View, action: NavigateAction) => {
-    switch (action) {
-      case 'PREV':
-        switch (view) {
-          case 'month':
-            setDate(subMonths(date, 1));
-            break;
-          case 'week':
-            setDate(subWeeks(date, 1));
-            break;
-          case 'day':
-            setDate(subDays(date, 1));
-            break;
-          default:
-            setDate(subWeeks(date, 1));
+  // Add calendar query near the events query
+  const { data: calendars = [], isLoading: calendarsLoading } = useQuery({
+    queryKey: ['calendars'],
+    queryFn: async () => {
+      const response = await fetch('/api/calendar/list');
+      if (!response.ok) {
+        if (response.status === 401) {
+          setIsAuthenticated(false);
+          throw new Error('Authentication required');
         }
-        break;
-      case 'NEXT':
-        switch (view) {
-          case 'month':
-            setDate(addMonths(date, 1));
-            break;
-          case 'week':
-            setDate(addWeeks(date, 1));
-            break;
-          case 'day':
-            setDate(addDays(date, 1));
-            break;
-          default:
-            setDate(addWeeks(date, 1));
+        throw new Error('Failed to fetch calendars');
+      }
+      const data = await response.json();
+      
+      // If we have a selected calendar, mark it as selected in the list
+      return data.map((cal: Calendar) => ({
+        ...cal,
+        selected: cal.id === selectedCalendar
+      }));
+    },
+    enabled: isAuthenticated === true,
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    gcTime: 30 * 60 * 1000, // Keep data in cache for 30 minutes
+  });
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (response.ok) {
+          const data = await response.json();
+          setIsAuthenticated(true);
+          setUserProfile(data);
+        } else {
+          setIsAuthenticated(false);
         }
-        break;
-      case 'TODAY':
-        setDate(new Date());
-        break;
-      default:
-        setDate(new Date());
-    }
-  };
+      } catch (error) {
+        console.error('Error checking authentication:', error);
+        setIsAuthenticated(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleViewChange = (newView: View) => {
     setView(newView);
+    setIsViewMenuOpen(false);
+  };
+
+  const handleNavigate = (newDate: Date) => {
+    setDate(newDate);
+  };
+
+  const handleMonthSelect = (month: number) => {
+    const newDate = new Date(date);
+    newDate.setMonth(month);
+    setDate(newDate);
+    setShowMonthDropdown(false);
   };
 
   const handleGoogleAuth = async () => {
@@ -254,7 +280,7 @@ const Calendar = ({ churchId }: CalendarProps) => {
       <div
         className={styles.eventWrapper}
         style={{ 
-          backgroundColor: props.event.color || '#0A84FF',
+          backgroundColor: props.event.color || props.event.calendarColor || '#0A84FF',
           fontSize: '11px',
           padding: '1px 4px',
           color: '#fff',
@@ -282,7 +308,7 @@ const Calendar = ({ churchId }: CalendarProps) => {
       // If the calendar was updated, refresh events
       if (data.calendarUpdated) {
         console.log('Calendar updated, refreshing events...');
-        await fetchEvents();
+        queryClient.invalidateQueries({ queryKey: ['events'] });
         
         // Dispatch event for other components
         window.dispatchEvent(new CustomEvent('calendarChange'));
@@ -310,7 +336,20 @@ const Calendar = ({ churchId }: CalendarProps) => {
     return months;
   };
 
-  if (isAuthenticated === null) {
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Only refetch events every 5 minutes
+      const interval = setInterval(() => {
+        queryClient.invalidateQueries({ queryKey: ['events'] });
+      }, 300000);
+      
+      return () => {
+        clearInterval(interval);
+      };
+    }
+  }, [isAuthenticated, queryClient]);
+
+  if (isAuthenticated === null || eventsLoading) {
     return (
       <div className={styles.loadingContainer}>
         <div className={styles.loadingSpinner} />
@@ -322,7 +361,10 @@ const Calendar = ({ churchId }: CalendarProps) => {
     return (
       <div className={styles.errorContainer}>
         <p className={styles.errorMessage}>{error}</p>
-        <button onClick={fetchEvents} className={styles.retryButton}>
+        <button 
+          onClick={() => queryClient.invalidateQueries({ queryKey: ['events'] })} 
+          className={styles.retryButton}
+        >
           Try Again
         </button>
       </div>
@@ -351,42 +393,49 @@ const Calendar = ({ churchId }: CalendarProps) => {
               >
                 <Menu size={24} />
               </button>
-              <button 
-                className={styles.monthSelector}
-                onClick={() => setShowMonthDropdown(!showMonthDropdown)}
-              >
-                {dateFnsFormat(date, 'MMMM yyyy')}
-                <ChevronDown size={16} />
-              </button>
-              {showMonthDropdown && (
-                <div className={styles.monthDropdown}>
-                  {getNextMonths().map(({ date: monthDate, label }) => (
-                    <button
-                      key={label}
-                      className={`${styles.monthOption} ${
-                        dateFnsFormat(date, 'MMMM yyyy') === label ? styles.activeMonth : ''
-                      }`}
-                      onClick={() => {
-                        setDate(startOfMonth(monthDate));
-                        setView('month');
-                        setShowMonthDropdown(false);
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className={styles.headerLogo}>
+                <button 
+                  className={styles.monthSelector}
+                  onClick={() => setShowMonthDropdown(!showMonthDropdown)}
+                >
+                  {dateFnsFormat(date, 'MMMM yyyy')}
+                  <ChevronDown size={16} />
+                </button>
+                {showMonthDropdown && (
+                  <div className={styles.monthDropdown}>
+                    {getNextMonths().map(({ date: monthDate, label }) => (
+                      <button
+                        key={label}
+                        className={`${styles.monthOption} ${
+                          dateFnsFormat(date, 'MMMM yyyy') === label ? styles.activeMonth : ''
+                        }`}
+                        onClick={() => {
+                          setDate(startOfMonth(monthDate));
+                          setView('month');
+                          setShowMonthDropdown(false);
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className={styles.headerRight}>
+            <div className={styles.headerRight} ref={profileMenuRef}>
               <button 
                 className={styles.profileButton}
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
               >
                 <UserCircle size={24} />
               </button>
-              {showProfileMenu && (
+              {showProfileMenu && userProfile && (
                 <div className={styles.profileMenu}>
+                  <div className={styles.profileHeader}>
+                    <strong>{userProfile.name}</strong>
+                    <div className={styles.profileEmail}>{userProfile.email}</div>
+                  </div>
+                  <div className={styles.menuDivider} />
                   <button 
                     className={styles.signOutButton}
                     onClick={handleSignOut}
@@ -405,7 +454,15 @@ const Calendar = ({ churchId }: CalendarProps) => {
           }}>
             <div className={styles.menu}>
               <div className={styles.menuHeader}>
-                <h3>PewPal</h3>
+                <button 
+                  className={styles.menuButton}
+                  onClick={() => setShowMenu(false)}
+                >
+                  <Menu size={24} />
+                </button>
+                <div className={styles.headerLogo}>
+                  <h3>PewPal</h3>
+                </div>
               </div>
               <div className={styles.menuContent}>
                 <div className={styles.menuItems}>
@@ -429,7 +486,14 @@ const Calendar = ({ churchId }: CalendarProps) => {
                   ))}
                 </div>
                 <div className={styles.menuDivider} />
-                <CalendarSelector />
+                <CalendarSelector 
+                  calendars={calendars} 
+                  isLoading={calendarsLoading}
+                  selectedCalendar={selectedCalendar}
+                  onCalendarChange={(calendarId) => {
+                    queryClient.setQueryData(['selectedCalendar'], calendarId);
+                  }}
+                />
               </div>
             </div>
           </div>

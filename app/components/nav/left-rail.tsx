@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Calendar, Plus, LogOut } from 'lucide-react';
@@ -18,6 +18,20 @@ export function LeftRail({
   onSignOut 
 }: LeftRailProps) {
   const [showSignOut, setShowSignOut] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node) && showSignOut) {
+        setShowSignOut(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSignOut]);
 
   const handleSignOut = () => {
     if (onSignOut) {
@@ -38,7 +52,7 @@ export function LeftRail({
         </button>
       </div>
 
-      <div className={styles.profile}>
+      <div className={styles.profile} ref={profileRef}>
         <button 
           className={styles.profileButton}
           onClick={() => setShowSignOut(!showSignOut)}

@@ -181,14 +181,10 @@
 }
 
 .calendar :global(.rbc-event) {
-  background-color: #007AFF;
-  border: none;
-  border-radius: 4px;
-  padding: 1px 4px;
-  font-size: 11px;
-  line-height: 1.3;
+  background-color: transparent !important;
+  border: none !important;
   margin: 1px 0;
-  color: white;
+  padding: 0;
 }
 
 .calendar :global(.rbc-show-more) {
@@ -376,13 +372,28 @@
 /* Event styles */
 .eventWrapper {
   margin: 1px 0;
-  padding: 2px 4px;
-  border-radius: 4px;
-  font-size: 12px;
-  line-height: 1.2;
-  white-space: nowrap;
+  padding: 1px 4px;
+  font-size: 11px;
+  line-height: 1.3;
+  color: white;
+  border-radius: 2px;
+  width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  border: none;
+}
+
+/* Remove any additional borders or outlines */
+.calendar :global(.rbc-event.rbc-selected) {
+  background-color: transparent !important;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.calendar :global(.rbc-event:focus) {
+  outline: none !important;
 }
 
 /* iOS-style transitions */
@@ -559,19 +570,18 @@
 }
 
 .headerContent {
-  max-width: 1200px;
-  margin: 0 auto;
   height: 100%;
-  padding: 0 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0;
+  position: relative;
 }
 
 .headerLeft {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  position: relative;
 }
 
 .headerRight {
@@ -669,19 +679,42 @@
 .profileMenu {
   position: absolute;
   top: 100%;
-  right: 1rem;
+  right: 0;
   margin-top: 0.5rem;
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  min-width: 150px;
+  min-width: 240px;
   z-index: 50;
+  padding: 0.5rem;
+}
+
+.profileHeader {
+  padding: 0.75rem;
+}
+
+.profileHeader strong {
+  display: block;
+  font-size: 0.875rem;
+  color: #111827;
+  margin-bottom: 0.25rem;
+}
+
+.profileEmail {
+  font-size: 0.75rem;
+  color: #6B7280;
+}
+
+.menuDivider {
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 0.5rem 0;
 }
 
 .signOutButton {
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem;
   text-align: left;
   background: none;
   border: none;
@@ -689,6 +722,7 @@
   font-size: 0.875rem;
   cursor: pointer;
   transition: background-color 0.2s;
+  border-radius: 0.375rem;
 }
 
 .signOutButton:hover {
@@ -702,12 +736,47 @@
   border-radius: 4px;
   cursor: pointer;
   color: #3c4043;
-  margin-right: 8px;
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
   transition: background-color 0.2s;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
 }
 
 .menuButton:hover {
   background-color: #f1f3f4;
+}
+
+.headerLogo {
+  margin-left: 64px;
+  display: flex;
+  align-items: center;
+}
+
+.menuHeader {
+  height: 64px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  position: relative;
+}
+
+.menuHeader .headerLogo {
+  margin-left: 64px;
+}
+
+.menuHeader h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 400;
+  color: #3c4043;
 }
 
 .menuOverlay {
@@ -722,7 +791,7 @@
 
 .menu {
   background: white;
-  width: 300px;
+  width: 250px; /* Reduced from 300px */
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -741,21 +810,6 @@
   height: 1px;
   background-color: #e5e7eb;
   margin: 8px 0;
-}
-
-.menuHeader {
-  height: 64px;
-  padding: 8px 16px;
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.menuHeader h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 400;
-  color: #3c4043;
 }
 
 .menuItems {
@@ -957,4 +1011,13 @@
   color: #1a73e8;
   font-weight: 500;
   background-color: #e8f0fe;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 } 

@@ -43,7 +43,7 @@ export async function parseCommand(message: string): Promise<CalendarCommand> {
     console.log('Parsing command:', message);
     
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-3.5-turbo",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: message }

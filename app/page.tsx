@@ -19,15 +19,11 @@ export default function Home() {
       <header className={styles.header}>
         <nav className={styles.nav}>
           <Link href="/" className={styles.logo}>
-            PewCal
+            PewPal
           </Link>
-          <div className={styles.navLinks}>
-            <Link href="#features">Features</Link>
-            <Link href="#pricing">Pricing</Link>
-            <a href={process.env.NEXT_PUBLIC_AUTH_URL} className={styles.loginButton}>
-              {hasExistingTokens ? 'Sign in' : 'Get Started'}
-            </a>
-          </div>
+          <a href={process.env.NEXT_PUBLIC_AUTH_URL} className={styles.loginButton}>
+            {hasExistingTokens ? 'Sign in' : 'Get Started'}
+          </a>
         </nav>
       </header>
 
@@ -46,7 +42,7 @@ export default function Home() {
           </div>
         </div>
 
-        <section id="features" className={styles.features}>
+        <section className={styles.features}>
           <div className={styles.feature}>
             <Calendar className="w-12 h-12 text-blue-600 mb-4" />
             <h3>Smart Scheduling</h3>
@@ -64,7 +60,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="pricing" className={styles.pricing}>
+        <section className={styles.pricing}>
           <h2>Simple, Transparent Pricing</h2>
           <div className={styles.pricingGrid}>
             <div className={styles.pricingCard}>

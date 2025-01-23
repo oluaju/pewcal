@@ -6,7 +6,7 @@
 }
 
 .header {
-  padding: 1rem 2rem;
+  padding: 1rem;
   border-bottom: 1px solid #eaeaea;
   position: fixed;
   top: 0;
@@ -22,6 +22,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0 1rem;
 }
 
 .logo {
@@ -56,6 +57,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  text-decoration: none;
 }
 
 .loginButton:hover {
@@ -74,8 +76,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4rem 1rem;
+  padding: 2rem 1rem;
   background: linear-gradient(to bottom, #ffffff, #f7f9fc);
+  min-height: 80vh;
 }
 
 .heroContent {
@@ -85,10 +88,11 @@
   flex-direction: column;
   align-items: center;
   gap: 1.5rem;
+  padding: 0 1rem;
 }
 
 .title {
-  font-size: 3rem;
+  font-size: clamp(2rem, 5vw, 3rem);
   line-height: 1.2;
   margin: 0;
   color: #1a1a1a;
@@ -100,7 +104,7 @@
 }
 
 .subtitle {
-  font-size: 1.25rem;
+  font-size: clamp(1rem, 3vw, 1.25rem);
   line-height: 1.5;
   margin: 0;
   color: #666;
@@ -115,11 +119,12 @@
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 1.125rem;
+  font-size: clamp(1rem, 2.5vw, 1.125rem);
   font-weight: 500;
   cursor: pointer;
   transition: background 0.2s;
   text-decoration: none;
+  width: fit-content;
 }
 
 .googleButton:hover {
@@ -127,10 +132,10 @@
 }
 
 .features {
-  padding: 4rem 2rem;
+  padding: 4rem 1rem;
   background: #f7f9fc;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
   max-width: 1200px;
   margin: 0 auto;
@@ -147,7 +152,7 @@
 
 .feature h3 {
   margin: 1rem 0;
-  font-size: 1.5rem;
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
   color: #1a1a1a;
 }
 
@@ -155,26 +160,28 @@
   margin: 0;
   color: #666;
   line-height: 1.5;
+  font-size: clamp(0.875rem, 2vw, 1rem);
 }
 
 .pricing {
-  padding: 4rem 2rem;
+  padding: 4rem 1rem;
   background: white;
   text-align: center;
 }
 
 .pricing h2 {
-  font-size: 2.5rem;
+  font-size: clamp(2rem, 4vw, 2.5rem);
   color: #1a1a1a;
   margin: 0 0 3rem;
 }
 
 .pricingGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
   max-width: 1000px;
   margin: 0 auto;
+  padding: 0 1rem;
 }
 
 .pricingCard {
@@ -197,19 +204,19 @@
 
 .pricingHeader h3 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
   color: #1a1a1a;
 }
 
 .price {
-  font-size: 2.5rem;
+  font-size: clamp(2rem, 4vw, 2.5rem);
   font-weight: 700;
   color: #1a1a1a;
   margin: 0.5rem 0;
 }
 
 .price span {
-  font-size: 1rem;
+  font-size: clamp(0.875rem, 2vw, 1rem);
   font-weight: 400;
   color: #666;
 }
@@ -225,6 +232,7 @@
   padding-left: 1.5rem;
   position: relative;
   color: #666;
+  font-size: clamp(0.875rem, 2vw, 1rem);
 }
 
 .pricingCard ul li::before {
@@ -252,68 +260,68 @@
 }
 
 .button {
+  display: inline-block;
   width: 100%;
-  padding: 1rem;
-  border-radius: 6px;
+  padding: 0.75rem 1.5rem;
+  background: white;
+  border: 1px solid #eaeaea;
+  border-radius: 8px;
+  color: #1a1a1a;
+  font-size: clamp(0.875rem, 2vw, 1rem);
   font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background: #006BFF;
-  color: white;
-  border: none;
-  text-decoration: none;
   text-align: center;
-  display: block;
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer;
 }
 
 .button:hover {
-  background: #0056b3;
+  border-color: #006BFF;
+  color: #006BFF;
 }
 
 .button.featured {
   background: #006BFF;
   color: white;
+  border: none;
+}
+
+.button.featured:hover {
+  background: #0056b3;
 }
 
 @media (max-width: 768px) {
   .header {
-    padding: 1rem;
+    padding: 0.75rem;
   }
 
   .nav {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .navLinks {
-    flex-direction: column;
-    width: 100%;
-  }
-
-  .loginButton {
-    width: 100%;
-    text-align: center;
+    padding: 0 0.5rem;
   }
 
   .hero {
-    padding: 2rem 1rem;
+    min-height: calc(100vh - 4rem);
+    padding: 1rem;
   }
 
-  .title {
-    font-size: 2rem;
-  }
-
-  .subtitle {
-    font-size: 1.125rem;
+  .heroContent {
+    padding: 0;
+    gap: 1rem;
   }
 
   .googleButton {
     width: 100%;
     justify-content: center;
+    padding: 0.875rem 1.5rem;
   }
 
   .features {
     padding: 2rem 1rem;
+    gap: 1rem;
+  }
+
+  .feature {
+    padding: 1.5rem;
   }
 
   .pricing {
@@ -321,7 +329,16 @@
   }
 
   .pricingGrid {
-    grid-template-columns: 1fr;
+    padding: 0;
+    gap: 1rem;
+  }
+
+  .pricingCard {
+    padding: 1.5rem;
+  }
+
+  .badge {
+    right: 10px;
   }
 }
 

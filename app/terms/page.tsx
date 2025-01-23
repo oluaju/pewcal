@@ -7,14 +7,14 @@ export default function TermsOfService() {
         <section>
           <h2 className="text-2xl font-semibold mb-4">1. Acceptance of Terms</h2>
           <p className="mb-4">
-            By accessing and using PewCal ("the Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the Service.
+            By accessing and using PewPal ("the Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the Service.
           </p>
         </section>
 
         <section>
           <h2 className="text-2xl font-semibold mb-4">2. Description of Service</h2>
           <p className="mb-4">
-            PewCal is a calendar management application that integrates with Google Calendar. The Service allows users to:
+            PewPal is a calendar management application that integrates with Google Calendar. The Service allows users to:
           </p>
           <ul className="list-disc pl-6 space-y-2">
             <li>View and manage calendar events</li>
@@ -26,7 +26,7 @@ export default function TermsOfService() {
 
         <section>
           <h2 className="text-2xl font-semibold mb-4">3. User Accounts</h2>
-          <p className="mb-4">To use PewCal, you must:</p>
+          <p className="mb-4">To use PewPal, you must:</p>
           <ul className="list-disc pl-6 space-y-2">
             <li>Have a valid Google account</li>
             <li>Provide accurate and complete information</li>
@@ -50,14 +50,14 @@ export default function TermsOfService() {
         <section>
           <h2 className="text-2xl font-semibold mb-4">5. Intellectual Property</h2>
           <p className="mb-4">
-            The Service and its original content, features, and functionality are owned by PewCal and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.
+            The Service and its original content, features, and functionality are owned by PewPal and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.
           </p>
         </section>
 
         <section>
           <h2 className="text-2xl font-semibold mb-4">6. Limitation of Liability</h2>
           <p className="mb-4">
-            PewCal shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of or inability to use the Service.
+            PewPal shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of or inability to use the Service.
           </p>
         </section>
 
@@ -80,7 +80,7 @@ export default function TermsOfService() {
           <p className="mb-4">
             If you have any questions about these Terms, please contact us at:
             <br />
-            Email: terms@pewcal.com
+            Email: terms@pewpal.com
           </p>
         </section>
 

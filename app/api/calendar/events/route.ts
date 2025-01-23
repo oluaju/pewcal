@@ -49,6 +49,18 @@ export async function GET(request: Request) {
     console.log('Debug - Creating calendar client');
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
     
+    // Get calendar colors
+    const colorsResponse = await calendar.colors.get();
+    const calendarColors = colorsResponse.data.calendar || {};
+    
+    // Get calendar details to get its color ID
+    const calendarResponse = await calendar.calendarList.get({
+      calendarId: googleCalendarId
+    });
+    
+    const calendarColorId = calendarResponse.data.colorId;
+    const calendarColor = calendarColorId ? calendarColors[calendarColorId]?.background : '#0A84FF';
+
     // Get events from 1 year ago to 1 year in the future
     const timeMin = new Date();
     timeMin.setFullYear(timeMin.getFullYear() - 1);
@@ -68,8 +80,14 @@ export async function GET(request: Request) {
     console.log('Debug - Successfully fetched events:', {
       count: response.data.items?.length || 0
     });
+
+    // Add calendar color to each event if they don't have their own color
+    const events = response.data.items?.map(event => ({
+      ...event,
+      calendarColor: event.colorId ? calendarColors[event.colorId]?.background : calendarColor
+    })) || [];
     
-    return NextResponse.json(response.data.items || []);
+    return NextResponse.json(events);
   } catch (error: any) {
     // Log the full error details
     console.error('Error fetching events:', {

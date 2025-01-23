@@ -21,8 +21,6 @@ export default function CalendarPage({ params }: PageProps) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  const chatRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     // Check authentication status
@@ -49,49 +47,32 @@ export default function CalendarPage({ params }: PageProps) {
     setRefreshKey(prev => prev + 1);
   }, []);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (chatRef.current && 
-          buttonRef.current && 
-          !chatRef.current.contains(event.target as Node) && 
-          !buttonRef.current.contains(event.target as Node)) {
-        setIsChatOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+  const toggleChat = useCallback(() => {
+    setIsChatOpen(prev => !prev);
   }, []);
 
   if (loading) {
-    return null;
+    return <div>Loading...</div>;
   }
 
   return (
-    <div className={`${styles.container} ${isDarkMode ? styles.darkMode : ''}`}>
-      <div className={styles.calendarSection}>
-        <Calendar key={refreshKey} churchId={params.id} />
-      </div>
+    <div className={styles.container}>
+      <Calendar key={refreshKey} churchId={params.id} />
       {isAuthenticated && (
         <>
-          <button 
-            ref={buttonRef}
-            className={`${styles.chatToggle} ${isChatOpen ? styles.active : ''}`}
-            onClick={() => setIsChatOpen(!isChatOpen)}
+          <button
+            onClick={toggleChat}
+            className={styles.chatButton}
             aria-label="Toggle chat"
           >
-            <BiMessageRoundedDots />
+            <BiMessageRoundedDots size={24} />
           </button>
-          {isChatOpen && (
-            <div 
-              ref={chatRef}
-              className={styles.chatSection}
-            >
-              <CalendarChat onEventUpdate={handleEventUpdate} churchId={params.id} />
-            </div>
-          )}
+          <CalendarChat
+            onEventUpdate={handleEventUpdate}
+            churchId={params.id}
+            onClose={toggleChat}
+            isVisible={isChatOpen}
+          />
         </>
       )}
     </div>
