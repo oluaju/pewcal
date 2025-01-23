@@ -5,7 +5,7 @@ export async function POST() {
   const cookieStore = cookies();
   
   // Create response that redirects to root URL
-  const response = NextResponse.redirect(new URL('/', process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'));
+  const response = NextResponse.redirect(new URL('/', process.env.NEXT_PUBLIC_BASE_URL));
   
   // List of all cookies to clear
   const cookiesToClear = [

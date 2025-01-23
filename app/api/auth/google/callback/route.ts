@@ -12,10 +12,14 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_A
   throw new Error('Missing required Supabase credentials');
 }
 
+if (!process.env.GOOGLE_REDIRECT_URI || !process.env.NEXT_PUBLIC_BASE_URL) {
+  throw new Error('Missing required URIs');
+}
+
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  'http://localhost:3000/api/auth/google/callback'
+  process.env.GOOGLE_REDIRECT_URI
 );
 
 const supabase = createClient(
@@ -38,12 +42,12 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error('Google OAuth error:', error);
-      return NextResponse.redirect('http://localhost:3000/?error=' + error);
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=${error}`);
     }
 
     if (!code) {
       console.error('No code received in callback');
-      return NextResponse.redirect('http://localhost:3000/?error=no_code');
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=no_code`);
     }
 
     // Exchange code for tokens
@@ -94,7 +98,7 @@ export async function GET(request: Request) {
 
     if (!userInfo.email) {
       console.error('No email received from Google');
-      return NextResponse.redirect('http://localhost:3000/?error=no_email');
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=no_email`);
     }
 
     // Create or update user profile with session info
@@ -128,7 +132,7 @@ export async function GET(request: Request) {
 
       if (fetchError) {
         console.error('Error fetching existing profile:', fetchError);
-        return NextResponse.redirect('http://localhost:3000/?error=profile_error');
+        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=profile_error`);
       }
 
       profile = existingProfile;
@@ -136,7 +140,7 @@ export async function GET(request: Request) {
 
     if (!profile) {
       console.error('No profile found or created');
-      return NextResponse.redirect('http://localhost:3000/?error=profile_error');
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=profile_error`);
     }
 
     // Store user ID in cookie with longer expiry
@@ -154,12 +158,12 @@ export async function GET(request: Request) {
 
     if (!calendar) {
       console.log('No calendar found, redirecting to setup');
-      return NextResponse.redirect('http://localhost:3000/calendar/setup');
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/calendar/setup`);
     }
 
     if (calendarError) {
       console.error('Error fetching calendar:', calendarError);
-      return NextResponse.redirect('http://localhost:3000/?error=calendar_error');
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=calendar_error`);
     }
 
     // Store calendar IDs in cookies with longer expiry
@@ -174,10 +178,10 @@ export async function GET(request: Request) {
     });
 
     console.log('Redirecting to calendar:', calendar.id);
-    return NextResponse.redirect(`http://localhost:3000/calendar/${calendar.id}`);
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/calendar/${calendar.id}`);
 
   } catch (error) {
     console.error('Error in callback:', error);
-    return NextResponse.redirect('http://localhost:3000/?error=callback_error');
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/?error=callback_error`);
   }
 } 

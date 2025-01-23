@@ -24,7 +24,7 @@ export default function Home() {
           <div className={styles.navLinks}>
             <Link href="#features">Features</Link>
             <Link href="#pricing">Pricing</Link>
-            <a href="/api/auth/login" className={styles.loginButton}>
+            <a href={process.env.NEXT_PUBLIC_AUTH_URL} className={styles.loginButton}>
               {hasExistingTokens ? 'Sign in' : 'Get Started'}
             </a>
           </div>
@@ -40,7 +40,7 @@ export default function Home() {
             <p className={styles.subtitle}>
               Join churches who easily manage their events with the #1 AI-powered church calendar tool.
             </p>
-            <a href="/api/auth/login" className={styles.googleButton}>
+            <a href={process.env.NEXT_PUBLIC_AUTH_URL} className={styles.googleButton}>
               <FaGoogle /> {hasExistingTokens ? 'Sign in with Google' : 'Sign up with Google Calendar'}
             </a>
           </div>
@@ -77,7 +77,7 @@ export default function Home() {
                 <li>Google Calendar integration</li>
                 <li>Up to 50 events/month</li>
               </ul>
-              <a href="/api/auth/login" className={styles.button}>Get Started</a>
+              <a href={process.env.NEXT_PUBLIC_AUTH_URL} className={styles.button}>Get Started</a>
             </div>
             <div className={`${styles.pricingCard} ${styles.featured}`}>
               <div className={styles.badge}>Popular</div>
@@ -91,7 +91,7 @@ export default function Home() {
                 <li>Unlimited events</li>
                 <li>Priority support</li>
               </ul>
-              <a href="/api/auth/login" className={`${styles.button} ${styles.featured}`}>Get Started</a>
+              <a href={process.env.NEXT_PUBLIC_AUTH_URL} className={`${styles.button} ${styles.featured}`}>Get Started</a>
             </div>
           </div>
         </section>
