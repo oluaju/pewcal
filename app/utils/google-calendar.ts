@@ -17,21 +17,22 @@ export interface GoogleCalendarEvent {
 
 export class GoogleCalendarClient {
   private calendar;
+  private oauth2Client: OAuth2Client;
 
   constructor(accessToken: string, refreshToken: string) {
     console.log('Initializing GoogleCalendarClient');
-    const oauth2Client = new google.auth.OAuth2(
+    this.oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/callback/google'
+      process.env.GOOGLE_REDIRECT_URI || `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/google/callback`
     );
 
-    oauth2Client.setCredentials({
+    this.oauth2Client.setCredentials({
       access_token: accessToken,
       refresh_token: refreshToken
     });
 
-    this.calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+    this.calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
     console.log('GoogleCalendarClient initialized');
   }
 
