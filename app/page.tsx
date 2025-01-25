@@ -92,6 +92,17 @@ export default function Home() {
           </div>
         </section>
       </main>
+
+      <footer className={styles.footer}>
+        <div className={styles.footerContent}>
+          <Link href="/privacy" className={styles.footerLink}>
+            Privacy Policy
+          </Link>
+          <Link href="/terms" className={styles.footerLink}>
+            Terms of Service
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 }
